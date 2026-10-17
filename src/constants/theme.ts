@@ -71,3 +71,21 @@ export const font = {
 
 /** Max content width so the layout stays readable on tablets/web. */
 export const MAX_CONTENT_WIDTH = 640;
+
+/**
+ * WhatsApp-style chat tokens.
+ * Close to WhatsApp's light palette so the chat screens feel familiar.
+ */
+export const chatColors = {
+  /** warm paper background behind the bubbles */
+  chatBg: "#EFE7DE",
+  /** outgoing bubble — WhatsApp's signature green */
+  bubbleOut: "#D9FDD3",
+  bubbleIn: "#FFFFFF",
+  waGreen: "#25D366",
+  /** delivered double-check */
+  tickSent: "#8696A0",
+  /** read double-check */
+  tickRead: "#53BDEB",
+  listSearchBg: "#F0F2F5",
+};

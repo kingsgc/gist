@@ -1,248 +1,343 @@
 /**
- * Feed — scrollable, localized gist stream.
- * State + topic filters, anon/public posts side by side.
- * Browsing is open; interactions prompt registration.
+ * Chats — the app's home screen, WhatsApp-style.
+ * One row per conversation: avatar, last message, time, unread badge.
+ * The built-in AI assistant is pinned at the top. A green FAB opens
+ * the new-chat screen. Browsing requires an account (register to
+ * participate — same flow as the rest of the app).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   FlatList,
+  Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 
-import { PostCard } from "@/components/PostCard";
-import { Button, Chip, EmptyState } from "@/components/ui";
-import { APP_TAGLINE, HOT_TOPICS, NIGERIAN_STATES } from "@/constants/states";
-import { colors, font, MAX_CONTENT_WIDTH, spacing } from "@/constants/theme";
-import { api } from "@/lib/api";
+import { Button, EmptyState, Input } from "@/components/ui";
+import { chatColors, colors, font, radius, spacing } from "@/constants/theme";
+import { initials, timeAgo } from "@/lib/format";
+import { AI_PROFILE, isAiConfigured } from "@/lib/ai";
+import { dataMode } from "@/lib/api";
+import { chatApi } from "@/lib/chat-api";
 import { useAuth } from "@/providers/AuthProvider";
-import type { Post } from "@/types";
+import type { ChatConversation } from "@/types/chat";
 
-export default function FeedScreen() {
+export default function ChatsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [stateFilter, setStateFilter] = useState<string | null>(null);
-  const [topicFilter, setTopicFilter] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+  const [chats, setChats] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState("");
+  const [openingAi, setOpeningAi] = useState(false);
 
   const load = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     try {
-      setError(null);
-      const rows = await api.listPosts({ state: stateFilter, topic: topicFilter });
-      setPosts(rows);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load gist. Pull to retry.");
+      setChats(await chatApi.listChats());
+    } catch {
+      setChats([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [stateFilter, topicFilter]);
+  }, [user]);
 
-  useEffect(() => {
-    setLoading(true);
-    load();
-  }, [load]);
-
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    load();
-  }, [load]);
-
-  const handleToggleLike = useCallback(async (postId: string) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? {
-              ...p,
-              likedByMe: !p.likedByMe,
-              likeCount: Math.max(0, p.likeCount + (p.likedByMe ? -1 : 1)),
-            }
-          : p,
-      ),
-    );
-    try {
-      const result = await api.toggleLike(postId);
-      setPosts((prev) =>
-        prev.map((p) => (p.id === postId ? { ...p, ...result } : p)),
-      );
-    } catch {
-      // revert silently; next refresh resyncs
-    }
-  }, []);
-
-  const handleShared = useCallback((postId: string, newCount: number) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p, shareCount: newCount } : p)),
-    );
-  }, []);
-
-  const requireAuth = useCallback(() => {
-    router.push("/auth");
-  }, [router]);
-
-  const allTopics = useMemo(() => {
-    const seen = new Set<string>(HOT_TOPICS);
-    for (const p of posts) {
-      if (p.topic) seen.add(p.topic);
-    }
-    return Array.from(seen);
-  }, [posts]);
-
-  const header = useMemo(
-    () => (
-      <View>
-        <Text style={styles.tagline}>{APP_TAGLINE}</Text>
-        {!user ? (
-          <View style={styles.registerBanner}>
-            <Text style={styles.registerText}>
-              Read the gist for free. Register to post, like & reply — anonymously if you like.
-            </Text>
-            <Button label="Register to participate" onPress={requireAuth} small />
-          </View>
-        ) : null}
-
-        <Text style={styles.sectionLabel}>State</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          <Chip
-            label="All Naija"
-            active={!stateFilter}
-            onPress={() => setStateFilter(null)}
-          />
-          {NIGERIAN_STATES.map((s) => (
-            <Chip
-              key={s}
-              label={s}
-              active={stateFilter === s}
-              onPress={() => setStateFilter(stateFilter === s ? null : s)}
-            />
-          ))}
-        </ScrollView>
-
-        <Text style={styles.sectionLabel}>Topics</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.chipRow}
-        >
-          <Chip label="All" active={!topicFilter} onPress={() => setTopicFilter(null)} />
-          {allTopics.map((t) => (
-            <Chip
-              key={t}
-              label={`#${t}`}
-              active={topicFilter === t}
-              onPress={() => setTopicFilter(topicFilter === t ? null : t)}
-            />
-          ))}
-        </ScrollView>
-      </View>
-    ),
-    [user, stateFilter, topicFilter, requireAuth, posts],
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      load();
+    }, [load]),
   );
 
+  const openAi = useCallback(async () => {
+    if (!user || openingAi) return;
+    setOpeningAi(true);
+    try {
+      const id = await chatApi.openAiChat();
+      router.push(`/chat/${id}`);
+    } catch {
+      // RPC hiccup — refresh next focus
+    } finally {
+      setOpeningAi(false);
+    }
+  }, [user, openingAi, router]);
+
+  const filtered = chats.filter((c) =>
+    query.trim()
+      ? c.peerHandle.toLowerCase().includes(query.trim().toLowerCase())
+      : true,
+  );
+
+  if (!user && !authLoading) {
+    return (
+      <View style={styles.guest}>
+        <EmptyState
+          title="Chats need an account"
+          subtitle="Register to message your contacts and text Gisty AI, the built-in assistant."
+        />
+        <Button label="Register / sign in" onPress={() => router.push("/auth")} />
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
-      <View style={styles.centered}>
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item.id}
-          ListHeaderComponent={header}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-          ListEmptyComponent={
-            loading ? (
-              <EmptyState title="Loading gist…" />
-            ) : error ? (
-              <EmptyState title="E don happen 😬" subtitle={error} />
-            ) : (
-              <EmptyState
-                title="No gist here yet"
-                subtitle="Be the first to drop one for this filter."
-              />
-            )
-          }
-          renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              referralCode={user?.referralCode ?? "GIST"}
-              isAuthenticated={Boolean(user)}
-              onPress={() => router.push({ pathname: "/post/[id]", params: { id: item.id } })}
-              onToggleLike={handleToggleLike}
-              onShared={handleShared}
-              onRequireAuth={requireAuth}
-            />
-          )}
+    <View style={styles.flex}>
+      {/* WhatsApp-style header: title + search */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Chats</Text>
+        <Input
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search chats…"
+          style={styles.search}
         />
       </View>
+
+      {/* AI assistant pinned row */}
+      <Pressable
+        onPress={openAi}
+        disabled={openingAi}
+        style={({ pressed }) => [
+          styles.aiRow,
+          !openingAi && pressed && { backgroundColor: colors.greenSoft },
+        ]}
+      >
+        <View style={[styles.avatar, styles.avatarAi]}>
+          <Ionicons name="sparkles" size={24} color="#fff" />
+        </View>
+        <View style={styles.rowMain}>
+          <View style={styles.rowTitleLine}>
+            <Text style={styles.rowName} numberOfLines={1}>
+              {AI_PROFILE.displayName}
+            </Text>
+            <View style={styles.aiBadge}>
+              <Text style={styles.aiBadgeText}>AI</Text>
+            </View>
+          </View>
+          <Text style={styles.rowPreview} numberOfLines={1}>
+            {AI_PROFILE.bio}
+          </Text>
+        </View>
+        <Text style={styles.rowTime}>—</Text>
+      </Pressable>
+
+      <FlatList
+        data={filtered}
+        keyExtractor={(c) => c.id}
+        renderItem={({ item }) => (
+          <Pressable
+            style={({ pressed }) => [styles.row, pressed && { backgroundColor: colors.greenSoft }]}
+            onPress={() => router.push(`/chat/${item.id}`)}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {initials(item.isAi ? "AI" : item.peerHandle)}
+              </Text>
+            </View>
+            <View style={styles.rowMain}>
+              <Text style={styles.rowName} numberOfLines={1}>
+                {item.isAi ? AI_PROFILE.displayName : item.peerHandle}
+              </Text>
+              <Text style={styles.rowPreview} numberOfLines={1}>
+                {item.lastBody ?? "Say hello 👋"}
+              </Text>
+            </View>
+            <View style={styles.rowSide}>
+              <Text style={styles.rowTime}>
+                {item.lastAt ? timeAgo(item.lastAt) : ""}
+              </Text>
+              {item.unread > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.unread}</Text>
+                </View>
+              )}
+            </View>
+          </Pressable>
+        )}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: 96 + insets.bottom },
+        ]}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => {
+              setRefreshing(true);
+              load();
+            }}
+            tintColor={colors.primary}
+          />
+        }
+        ListEmptyComponent={
+          loading ? (
+            <EmptyState title="Loading chats…" />
+          ) : (
+            <EmptyState
+              title="No chats yet"
+              subtitle={
+                dataMode === "supabase"
+                  ? "Tap the green button to start a chat with someone — or text Gisty AI above."
+                  : "Demo mode: chats live on this device only. Add real Supabase keys in .env to chat with actual people."
+              }
+            />
+          )
+        }
+      />
+
+      {/* FAB — new chat */}
+      <Pressable
+        accessibilityRole="button"
+        style={[styles.fab, { bottom: 24 + insets.bottom }]}
+        onPress={() => user && router.push("/new-chat")}
+      >
+        <Ionicons name="chatbubbles" size={26} color="#fff" />
+      </Pressable>
+
+      <Text style={styles.modeHint}>
+        {isAiConfigured
+          ? null
+          : "Gisty AI is on backup mode — add EXPO_PUBLIC_AI_API_KEY in .env for real answers."}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: { flex: 1 },
+  guest: {
     flex: 1,
-    backgroundColor: colors.background,
+    justifyContent: "center",
+    paddingHorizontal: spacing.xl,
+    gap: spacing.lg,
   },
-  centered: {
-    flex: 1,
-    width: "100%",
-    maxWidth: MAX_CONTENT_WIDTH,
-    alignSelf: "center",
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
-  listContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  tagline: {
-    fontSize: font.sizes.xl,
-    fontWeight: "900",
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  registerBanner: {
-    backgroundColor: colors.greenSoft,
-    borderRadius: 16,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-  },
-  registerText: {
-    color: colors.greenDark,
-    fontSize: font.sizes.sm,
-    fontWeight: "600",
-    lineHeight: 19,
-  },
-  sectionLabel: {
-    fontSize: font.sizes.xs,
+  headerTitle: {
+    fontSize: 28,
     fontWeight: "800",
-    color: colors.textFaint,
-    textTransform: "uppercase",
-    letterSpacing: 1,
+    color: colors.text,
     marginBottom: spacing.sm,
-    marginTop: spacing.xs,
   },
-  chipRow: {
-    paddingBottom: spacing.md,
-    paddingRight: spacing.lg,
+  search: {
+    backgroundColor: chatColors.listSearchBg,
+    borderColor: "transparent",
+    paddingVertical: 8,
+  },
+  aiRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginHorizontal: spacing.sm,
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.sm + 2,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginHorizontal: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    minHeight: 64,
+  },
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.greenSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarAi: { backgroundColor: colors.primary, borderColor: colors.greenDark },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: colors.primary,
+  },
+  rowMain: { flex: 1 },
+  rowTitleLine: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  rowName: {
+    fontSize: font.sizes.lg - 1,
+    fontWeight: "700",
+    color: colors.text,
+    flexShrink: 1,
+  },
+  rowPreview: {
+    fontSize: font.sizes.sm,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  rowSide: {
+    alignItems: "flex-end",
+    gap: 4,
+    marginLeft: spacing.xs,
+  },
+  rowTime: {
+    fontSize: font.sizes.xs,
+    color: colors.textFaint,
+    fontWeight: "600",
+  },
+  badge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  aiBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  aiBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  listContent: { paddingTop: spacing.xs },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: chatColors.waGreen,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  modeHint: {
+    textAlign: "center",
+    fontSize: font.sizes.xs - 1,
+    color: colors.textFaint,
+    paddingBottom: 6,
   },
 });

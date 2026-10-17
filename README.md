@@ -23,6 +23,30 @@ React Native (TypeScript) + Expo, backed by Supabase (Postgres + Auth).
   fully offline against a seeded local store (`src/lib/demo-store.ts`), so
   every screen and interaction works before you create a Supabase project.
 
+## Chat MVP (WhatsApp-style) 💬
+
+The app has pivoted to a chat-first MVP: **Chats** is the home tab. Real 1:1
+messages run on Supabase tables + realtime, and a built-in **Gisty AI**
+assistant contact texts like a regular chat.
+
+Setup, one time — after `supabase/schema.sql`:
+
+1. Paste [`supabase/chat-schema.sql`](supabase/chat-schema.sql) into the
+   Supabase SQL Editor and run it (chat tables, RLS, RPCs, realtime).
+2. For real AI answers, paste your own (OpenAI-compatible) key in `.env`:
+
+   ```bash
+   EXPO_PUBLIC_AI_API_KEY=<your-key>
+   EXPO_PUBLIC_AI_BASE_URL=https://api.openai.com/v1   # or any OpenAI-compatible endpoint
+   EXPO_PUBLIC_AI_MODEL=gpt-4o-mini
+   ```
+
+   Leave the key empty and Gisty AI replies from the built-in offline persona.
+3. Restart the dev server (`npx expo start -c`).
+
+The old gist-feed screens are still in the codebase (see git history) but are
+no longer part of the app's navigation.
+
 ## Get started
 
 ```bash

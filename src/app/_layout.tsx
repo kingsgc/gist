@@ -21,6 +21,10 @@ export default function RootLayout() {
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="auth" options={{ title: "Join Gist", presentation: "modal" }} />
+        {/* Chat MVP screens */}
+        <Stack.Screen name="chat/[id]" options={{ headerShown: true }} />
+        <Stack.Screen name="new-chat" options={{ title: "New chat" }} />
+        {/* Legacy gist routes — kept routable but outside chat navigation */}
         <Stack.Screen name="post/[id]" options={{ title: "Gist" }} />
         <Stack.Screen
           name="share/[id]"

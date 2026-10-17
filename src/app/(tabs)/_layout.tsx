@@ -1,4 +1,8 @@
-/** Bottom tab bar — Feed, Compose, Profile. Pipe-vector icons throughout. */
+/**
+ * Bottom tab bar — Chats (home), Profile. Pipe-vector icons throughout.
+ * The chat MVP is chat-only: the old Feed/Compose tabs stay in the
+ * codebase but are no longer part of navigation.
+ */
 
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -44,17 +48,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Gist",
-          tabBarLabel: "Feed",
-          tabBarIcon: ({ focused }) => <TabIcon icon={focused ? "flame" : "flame-outline"} focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="compose"
-        options={{
-          title: "Drop a gist",
-          tabBarLabel: "Post",
-          tabBarIcon: ({ focused }) => <TabIcon icon={focused ? "add-circle" : "add-circle-outline"} focused={focused} />,
+          title: "Chats",
+          tabBarLabel: "Chats",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={focused ? "chatbubbles" : "chatbubbles-outline"} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -62,7 +60,9 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarLabel: "Me",
-          tabBarIcon: ({ focused }) => <TabIcon icon={focused ? "person-circle" : "person-circle-outline"} focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon={focused ? "person-circle" : "person-circle-outline"} focused={focused} />
+          ),
         }}
       />
     </Tabs>
