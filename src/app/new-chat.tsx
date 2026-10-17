@@ -33,10 +33,7 @@ export default function NewChatScreen() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user) return;
     let dead = false;
     chatApi
       .listContacts(user)

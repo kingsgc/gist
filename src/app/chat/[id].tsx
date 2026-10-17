@@ -94,10 +94,7 @@ export default function ChatRoomScreen() {
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   useEffect(() => {
-    if (!chatId || (!user && !authLoading)) {
-      if (!user) setError("Sign in to open chats.");
-      return;
-    }
+    if (!chatId || !user) return;
     let dead = false;
     let unsubscribe: (() => void) | null = null;
 

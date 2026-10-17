@@ -25,7 +25,7 @@ export function StatePickerModal({
     <View style={styles.backdrop} pointerEvents="box-none">
       <View style={styles.modal} pointerEvents="box-none">
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Where's the gist from?</Text>
+          <Text style={styles.headerTitle}>Where’s the gist from?</Text>
           <Pressable
             onPress={() => {
               onChange(null);

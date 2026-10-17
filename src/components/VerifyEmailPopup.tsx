@@ -38,7 +38,7 @@ export function VerifyEmailPopup({
           <Text style={styles.title}>Verify your email</Text>
           <Text style={styles.body}>
             We just sent a verification link to your inbox. Tap it, then come
-            back and you'll be able to log in and post — including
+            back and you’ll be able to log in and post — including
             anonymously, if you like.
           </Text>
 

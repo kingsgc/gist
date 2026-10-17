@@ -48,7 +48,9 @@ export default function PostDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const handleToggleLike = useCallback(async (postId: string) => {
