@@ -1,7 +1,26 @@
-# Gist 🇳🇬
+<p align="center">
+  <img src="assets/images/icon.png" alt="Gist logo" width="140" />
+</p>
 
-Anonymous community engagement + local banter, built for the Nigerian market.
-React Native (TypeScript) + Expo, backed by Supabase (Postgres + Auth).
+<h1 align="center">Gist 🇳🇬</h1>
+
+<p align="center">
+  Anonymous community engagement + local banter, built for the Nigerian market.<br/>
+  React Native (TypeScript) + Expo, backed by Supabase (Postgres + Auth).
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/platform-iOS%20%7C%20Android%20%7C%20Web-blue" alt="Platform" />
+  <img src="https://img.shields.io/badge/Expo-SDK%2057-black" alt="Expo SDK 57" />
+  <img src="https://img.shields.io/badge/React%20Native-0.86-61dafb" alt="React Native" />
+  <img src="https://img.shields.io/badge/TypeScript-6.0-3178c6" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth-3FCF8E" alt="Supabase" />
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
+</p>
+
+<p align="center">
+  <img src="assets/images/logo-glow.png" alt="Gist" width="420" />
+</p>
 
 ## Features
 
